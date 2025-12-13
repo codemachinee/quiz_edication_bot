@@ -1,0 +1,72 @@
+# --- Основные метаданные проекта ---
+[project]
+name = "breef-bot" # Название проекта
+version = "0.1.0" # Версия проекта
+description = "Add your description here" # Описание проекта
+requires-python = ">=3.11" # Требуемая версия Python
+dependencies = [ # Список зависимостей проекта
+    "aiogram>=3.22.0",
+    "gspread==6.0.2",
+    "gspread-asyncio==2.0.0",
+    "loguru>=0.7.3",
+    "mypy>=1.19.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytz>=2025.2",
+    "requests>=2.32.5",
+    "ruff>=0.14.8", # Инструмент для форматирования и линтинга кода
+    "urllib3>=2.5.0",
+]
+
+# --- Настройки инструмента Ruff (форматирование и линтинг кода) ---
+[tool.ruff]
+target-version = "py311" # Целевая версия Python для анализа Ruff
+fix = true # Включить автоматическое исправление ошибок
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"] # Выбираемые категории правил линтинга (ошибки, фатальные ошибки, предупреждения, импорты)
+ignore = ["E501"] # Игнорировать правило E501 (слишком длинная строка)
+exclude = [ # Исключаемые файлы и директории из анализа Ruff
+    ".git",
+    "__pycache__",
+    ".venv",
+    "build",
+    ".github",
+    ".dockerignore",
+    ".gitignore",
+    "passwords.py", # Исключить файл с паролями
+    "LICENSE",
+    "loggs.log", # Исключить файл логов
+    "pidor-of-the-day-af3dd140b860.json", # Исключить файл ключа Google Service Account
+    "pyproject.toml",
+    "uv.lock"
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true # Объединять импорты типа `import x as y`
+known-first-party = ["breef_bot"] # Определить `breef_bot` как собственный пакет для сортировки импортов
+
+# --- Настройки инструмента Mypy (статическая проверка типов) ---
+[tool.mypy]
+mypy_path = "breef_bot" # Путь к исходным файлам проекта для Mypy
+strict = false # Включает строгую проверку типов
+ignore_missing_imports = true # Не проверять сторонние библиотеки на отсутствие аннотаций
+warn_unused_ignores = true # Предупреждать об игнорируемых аннотациях, которые не используются
+warn_redundant_casts = true # Предупреждать о ненужных `cast()`
+disallow_untyped_defs = false # Запрещает функции без аннотации типов
+
+# --- Настройки Pytest (фреймворк для тестирования) ---
+[tool.pytest.ini_options]
+asyncio_mode = "auto" # Автоматическое определение режима asyncio для тестов
+testpaths = ["tests"] # Директория, где искать файлы тестов
+python_files = ["test_*.py"] # Шаблон имен файлов тестов
+python_classes = ["Test*"] # Шаблон имен классов тестов
+python_functions = ["test_*"] # Шаблон имен функций тестов
+#addopts = "--strict-markers --tb=short --disable-warnings" # Закомментированные дополнительные опции pytest
+asyncio_default_fixture_loop_scope = "function" # Цикл событий создаётся заново для каждого теста. Это безопасный вариант, избегающий влияния тестов друг на друга.
+
+markers = [ # Определенные пользовательские маркеры для тестов
+    "slow: помечает тесты, которые работают медленно",
+    "db: тесты, связанные с базой данных",
+    "api: тесты, проверяющие API",
+    "asyncio: mark test to run with asyncio event loop" # Маркер для асинхронных тестов
+]

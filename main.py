@@ -30,8 +30,6 @@ from handlers import (
     day_visitors,
     help,
     menu,
-    post,
-    sent_message,
     start,
 )
 
@@ -64,8 +62,6 @@ dp = Dispatcher()  # Создание экземпляра диспетчера 
 dp.message.register(start, Command(commands="start"))
 dp.message.register(help, Command(commands="help"))
 dp.message.register(menu, Command(commands="menu"))
-dp.message.register(post, Command(commands="post"))
-dp.message.register(sent_message, Command(commands="sent_message"))
 dp.message.register(day_visitors, Command(commands="day_visitors"))
 
 # Регистрация обработчиков для FSM-состояний, связанных с административными функциями и рассылками

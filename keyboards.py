@@ -13,18 +13,16 @@ class Buttons:  # класс для создания клавиатур разл
     def __init__(
         self,
         bot,
-        message,
-        keys_dict=None,
-        back_button=None,
-        kategoriya="",
-        question="Пожалуйста выберите:",
+        message: types.Message,
+        keys_dict: dict,
+        back_button: str = None,
+        question: str = None,
     ):
         self.bot = bot
         self.message = message
         self.back_button = back_button
         self.question = question
         self.keys_dict = keys_dict
-        self.kategoriya = kategoriya
 
     async def menu_buttons(self):
         try:
@@ -34,24 +32,10 @@ class Buttons:  # класс для создания клавиатур разл
             for i in keys_list:
                 index = keys_list.index(i)
                 button = types.InlineKeyboardButton(
-                    text=i, callback_data=f"{self.kategoriya + i}"
+                    text=i, callback_data=f"{i}"
                 )
                 keys[f"but{index}"] = button
-
-                # Группируем кнопки попарно
-                if index > 0 and index % 2 != 0:
-                    previous_button = keys[f"but{index - 1}"]
-                    if (
-                        len(i) <= 16
-                        and len(keys_list[index - 1]) <= 16
-                        and structure_menu["Основное меню"] != self.keys_dict
-                    ):
-                        keyboard_list.append([previous_button, button])
-                    else:
-                        keyboard_list.append([previous_button])
-                        keyboard_list.append([button])
-                elif index == (len(keys_list) - 1):
-                    keyboard_list.append([button])
+                keyboard_list.append([button])
             if self.back_button is not None:
                 back_button = types.InlineKeyboardButton(
                     text="⬅️ Назад", callback_data=self.back_button
@@ -65,14 +49,91 @@ class Buttons:  # класс для создания клавиатур разл
                 text=self.question,
                 chat_id=self.message.chat.id,
                 message_id=self.message.message_id,
-                parse_mode="markdown",
+                parse_mode="markdown", reply_markup=kb2
             )
-            await asyncio.sleep(0.1)
-            await self.bot.edit_message_reply_markup(
-                chat_id=self.message.chat.id,
-                message_id=self.message.message_id,
-                reply_markup=kb2,
+        except TelegramBadRequest as e:
+            if "message can't be edited" in str(e):
+                await self.bot.send_message(
+                    chat_id=self.message.chat.id,
+                    text=self.question,
+                    message_thread_id=self.message.message_thread_id,
+                    parse_mode="html",
+                    reply_markup=kb2,
+                )
+        except Exception as e:
+            logger.exception("Ошибка в keyboards/menu_buttons", e)
+            await self.bot.send_message(
+                loggs_acc, f"Ошибка в keyboards/menu_buttons: {e}"
             )
+    async def test_buttons(self, type: str='single'):
+        try:
+            if type in ["single", 'tf']:
+                keys = {}
+                keyboard_list = []
+                keys_list = list(self.keys_dict)
+                for i in keys_list:
+                    index = keys_list.index(i)
+                    button = types.InlineKeyboardButton(
+                        text=i, callback_data=f"{self.keys_dict[i]}"
+                    )
+                    keys[f"but{index}"] = button
+                    keyboard_list.append([button])
+                if self.back_button is not None:
+                    back_button = types.InlineKeyboardButton(
+                        text="⬅️ Назад", callback_data=self.back_button
+                    )
+                    keyboard_list.append([back_button])
+                kb2 = types.InlineKeyboardMarkup(
+                    inline_keyboard=keyboard_list, resize_keyboard=True
+                )
+                await asyncio.sleep(0.3)
+                await self.bot.edit_message_text(
+                    text=self.question,
+                    chat_id=self.message.chat.id,
+                    message_id=self.message.message_id,
+                    parse_mode="markdown", reply_markup=kb2
+                )
+            elif type == "multiple":
+                keys = {}
+                keyboard_list = []
+                keys_list = list(self.keys_dict)
+                answers = 0
+                for i in keys_list:
+                    index = keys_list.index(i)
+                    if '✅' in i:
+                        button = types.InlineKeyboardButton(
+                            text=i, callback_data=f"multi_off_{i}"
+                        )
+                        answers += 1
+                    else:
+                        button = types.InlineKeyboardButton(
+                            text=i, callback_data=f"multi_on_{i}"
+                        )
+                    keys[f"but{index}"] = button
+                    keyboard_list.append([button])
+                if answers > 0:
+                    answer_button = types.InlineKeyboardButton( text="✅ Отправить ответ", callback_data='multi_answer')
+                    keyboard_list.append([answer_button])
+                if self.back_button is not None:
+                    back_button = types.InlineKeyboardButton(
+                        text="⬅️ Назад", callback_data=self.back_button
+                    )
+                    keyboard_list.append([back_button])
+                kb2 = types.InlineKeyboardMarkup(
+                    inline_keyboard=keyboard_list, resize_keyboard=True
+                )
+                await self.bot.edit_message_text(
+                    text=self.question,
+                    chat_id=self.message.chat.id,
+                    message_id=self.message.message_id,
+                    parse_mode="html"
+                )
+                await asyncio.sleep(0.1)
+                await self.bot.edit_message_reply_markup(
+                    chat_id=self.message.chat.id,
+                    message_id=self.message.message_id,
+                    reply_markup=kb2,
+                )
         except TelegramBadRequest as e:
             if "message can't be edited" in str(e):
                 await self.bot.send_message(

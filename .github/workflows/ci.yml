@@ -30,9 +30,9 @@ jobs:
       - name: Установка зависимостей
         run: uv sync --all-extras --dev
 
-      - name: Create passwords.py from secrets
+      - name: Create paswords.py from secrets
         run: |
-          cat <<'EOF' > passwords.py
+          cat <<'EOF' > paswords.py
           ${{ secrets.PASWORDS_PY }}
           EOF
 

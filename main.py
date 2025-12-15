@@ -103,9 +103,9 @@ async def main():
     try:
         logger.info("включение бота")
         await set_commands()  # Установка команд в меню бота
-        await clients_base.load_base(
+        # await clients_base.load_base(
             # await sheet_base.get_clients(bot)
-        )  # Загрузка клиентской базы в память
+        # )  # Загрузка клиентской базы в память
         await dp.start_polling(bot)  # Запуск polling-режима для получения обновлений
     except Exception as e:
         logger.exception(f"Ошибка в боте: {e}")  # Логирование критических ошибок

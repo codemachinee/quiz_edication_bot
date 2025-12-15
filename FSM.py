@@ -2,7 +2,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from loguru import logger
 
-from google_sheets import get_sheet_base
 from paswords import admin_id, loggs_acc
 
 # --- Классы состояний FSM для различных сценариев взаимодействия с ботом ---
@@ -98,17 +97,3 @@ async def message_from_admin_text(message, state: FSMContext, bot):
         await bot.send_message(loggs_acc, f"Ошибка в FSM/message_from_admin_text: {e}")
         await state.clear()
 
-
-async def rassylka(message, bot, state: FSMContext):
-    """
-    Обработчик для выполнения рассылки сообщения всем пользователям из базы.
-    Использует функцию `rasylka_v_bazu` из модуля `google_sheets`.
-    """
-    try:
-        sheet_base = await get_sheet_base()
-        await sheet_base.rasylka_v_bazu(bot, message)
-        await state.clear()
-    except Exception as e:
-        logger.exception("Ошибка в FSM/rassylka", e)
-        await bot.send_message(loggs_acc, f"Ошибка в FSM/rassylka: {e}")
-        await state.clear()

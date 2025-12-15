@@ -65,8 +65,12 @@ class Buttons:  # класс для создания клавиатур разл
             await self.bot.send_message(
                 loggs_acc, f"Ошибка в keyboards/menu_buttons: {e}"
             )
-    async def test_buttons(self, type: str='single'):
+    async def test_buttons(self, type: str='single', bot_message=None):
         try:
+            if bot_message is None:
+                bot_message = self.message.message_id
+            else:
+                bot_message = bot_message.message_id
             if type in ["single", 'tf']:
                 keys = {}
                 keyboard_list = []
@@ -134,6 +138,23 @@ class Buttons:  # класс для создания клавиатур разл
                     message_id=self.message.message_id,
                     reply_markup=kb2,
                 )
+            if type == 'matching':
+                keyboard_list = []
+                if self.back_button is not None:
+                    back_button = types.InlineKeyboardButton(
+                        text="⬅️ Назад", callback_data=self.back_button
+                    )
+                    keyboard_list.append([back_button])
+                kb2 = types.InlineKeyboardMarkup(
+                    inline_keyboard=keyboard_list, resize_keyboard=True
+                )
+                message = await self.bot.edit_message_text(
+                    text=self.question,
+                    chat_id=self.message.chat.id,
+                    message_id=bot_message,
+                    parse_mode="html", reply_markup=kb2
+                )
+                return message
         except TelegramBadRequest as e:
             if "message can't be edited" in str(e):
                 await self.bot.send_message(

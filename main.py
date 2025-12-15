@@ -10,18 +10,14 @@ from FSM import (
     Breef,
     Get_admin,
     Message_from_admin,
-    Rassylka,
     message_from_admin_chat,
     message_from_admin_text,
     message_from_user,
-    rassylka,
 )
 
 # Импорт класса для управления клиентской базой
 from functions import clients_base
 
-# Импорт функции для получения доступа к Google Sheets
-from google_sheets import get_sheet_base
 
 # Импорт основных обработчиков команд и сообщений
 from handlers import (
@@ -34,7 +30,7 @@ from handlers import (
 )
 
 # Импорт токенов и идентификаторов для логирования и бота
-from paswords import codemachinee_breef_bot, loggs_acc
+from paswords import codemachinee_breef_bot, loggs_acc, tests_mk_bot
 
 # --- Настройка логирования с помощью Loguru ---
 logger.remove()  # Удаляет стандартные обработчики loguru, чтобы настроить свои
@@ -50,8 +46,8 @@ logger.add(
 )
 
 # --- Инициализация бота и диспетчера ---
-token = codemachinee_breef_bot  # Выбор токена для бота
-# token = codemashine_test # Закомментированный тестовый токен
+# token = codemachinee_breef_bot  # Выбор токена для бота
+token = tests_mk_bot
 
 bot = Bot(token=token)  # Создание экземпляра бота
 dp = Dispatcher()  # Создание экземпляра диспетчера для обработки событий
@@ -67,7 +63,6 @@ dp.message.register(day_visitors, Command(commands="day_visitors"))
 # Регистрация обработчиков для FSM-состояний, связанных с административными функциями и рассылками
 dp.message.register(message_from_admin_chat, Message_from_admin.user_id)
 dp.message.register(message_from_admin_text, Message_from_admin.message)
-dp.message.register(rassylka, Rassylka.post)
 
 # Регистрация обработчиков для callback-запросов и текстовых сообщений в контексте FSM
 dp.callback_query.register(
@@ -107,10 +102,9 @@ async def main():
     """
     try:
         logger.info("включение бота")
-        sheet_base = await get_sheet_base()  # Инициализация доступа к Google Sheets
         await set_commands()  # Установка команд в меню бота
         await clients_base.load_base(
-            await sheet_base.get_clients(bot)
+            # await sheet_base.get_clients(bot)
         )  # Загрузка клиентской базы в память
         await dp.start_polling(bot)  # Запуск polling-режима для получения обновлений
     except Exception as e:

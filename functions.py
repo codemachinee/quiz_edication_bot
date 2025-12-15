@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from loguru import logger
@@ -80,3 +81,33 @@ async def is_today(date_str: str) -> bool:
     except ValueError:
         # В случае ошибки парсинга даты, считается, что дата не сегодняшняя.
         return False
+
+
+async def send_long_message(bot, chat_id, text, parse_mode="html"):
+    """
+    Разбивает длинное сообщение на части по 4096 символов и отправляет их.
+    """
+    MAX_MESSAGE_LENGTH = 4096
+    if len(text) <= MAX_MESSAGE_LENGTH:
+        await bot.send_message(chat_id, text, parse_mode=parse_mode)
+    else:
+        # Простая разбивка, можно улучшить, чтобы не обрезать слова посередине
+        chunks = []
+        while text:
+            if len(text) > MAX_MESSAGE_LENGTH:
+                chunk = text[:MAX_MESSAGE_LENGTH]
+                last_newline_index = chunk.rfind('\n') # Попробуем обрезать по последнему переводу строки
+                if last_newline_index != -1 and last_newline_index > MAX_MESSAGE_LENGTH - 500: # Если перевод строки достаточно близко к концу чанка
+                    chunk = text[:last_newline_index]
+                    text = text[last_newline_index:].lstrip('\n') # Удаляем лишние переводы строки в начале следующего чанка
+                else:
+                    chunk = text[:MAX_MESSAGE_LENGTH]
+                    text = text[MAX_MESSAGE_LENGTH:]
+            else:
+                chunk = text
+                text = ""
+            chunks.append(chunk)
+
+        for i, chunk in enumerate(chunks):
+            await bot.send_message(chat_id, chunk, parse_mode=parse_mode)
+            await asyncio.sleep(0.5)

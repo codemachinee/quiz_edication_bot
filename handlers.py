@@ -1,12 +1,13 @@
 from datetime import datetime
 
+import pytz
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-from FSM import Breef, Get_admin, Rassylka
-from functions import clients_base, is_today
-from google_sheets import get_sheet_base, moscow_tz
+from FSM import Breef, Get_admin
+from functions import clients_base, is_today, send_long_message
+moscow_tz = pytz.timezone('Europe/Moscow')
 from keyboards import Buttons
 from paswords import admin_id, admins_list, loggs_acc
 from structure import HELP_TEXT, structure_menu
@@ -50,8 +51,8 @@ async def help(message: Message, bot, state: FSMContext):
                 "<b>Основные команды поддерживаемые ботом:\n</b>"
                 "/menu - главное функциональное меню\n"
                 "/start - инициализация бота\n"
-                "/help - список доступных команд\n"
-                "/day_visitors - пользователи посетившие бота сегодня",
+                "/help - список доступных команд\n",
+                # "/day_visitors - пользователи посетившие бота сегодня",
                 parse_mode="html",
             )
         else:
@@ -154,14 +155,6 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
             await Buttons(
                 bot, callback.message, {}, "Основное меню", question=HELP_TEXT
             ).menu_buttons()
-
-        # elif callback.data == "🎁 Полезные материалы":
-        #     await bot.send_message(
-        #         chat_id=callback.message.chat.id,
-        #         text="<b>Перейти на google диск для просмотра материалов: </b>"
-        #         "https://drive.google.com/drive/folders/1IJIbj-ML4eG5jdoWohRyRC2fqR92jkUE?usp=sharing",
-        #         parse_mode="html",
-        #     )
 
         elif callback.data == "👨🏻‍💻 Чат с администратором":
             await state.clear()
@@ -324,44 +317,19 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                     keys_dict = {}
                     for k in question['options']:
                         keys_dict[f'{k}'] = f'answer_{k}'
-                    # await bot.answer_callback_query(callback.id)
+                    await bot.answer_callback_query(callback.id)
                     await Buttons(
                         bot,
                         callback.message,
                         question=text,
                         back_button='назад', keys_dict=keys_dict).test_buttons(type=question['type'])
                     await state.update_data(question_idx=idx, answers=answers)
-                else:
-                    text = "РЕЗУЛЬТАТЫ ПРОХОЖДЕНИЯ\n\n\n"
-                    for i in answers:
-                        text = text + i['part'] + '\n\n' + i['text'] + '\n' + 'Ваш ответ:' + i['answer'] + '\n' + 'Правильный ответ:' + i['correct'] + '\n' + "Пояснение:" + i['interpretation']
-                    await Buttons(
-                        bot,
-                        callback.message,
-                        question=text,
-                        back_button='✍🏼 Тесты ️', keys_dict={}).test_buttons()
-                    await bot.send_message(
-                        admin_id,
-                        f"🚨Уведомление🚨\n"
-                        f"<b>Пройденный тест от:</b>\n"
-                        f"Псевдоним: @{callback.username}\n"
-                        f"id чата: {callback.message.chat.id}\n\n"
-                        f"Тест: {section}\n"
-                        f"/sent_message - отправить сообщение с помощью бота",
-                        parse_mode="html",
-                    )
-                    await bot.send_message(
-                        admin_id,
-                        f"<b>Результаты прохождения:</b>\n\n {text}\n",
-                        parse_mode="html"
-                    )
-                    await state.clear()
 
         elif callback.data.startswith('multi_'):
             type_value = callback.data.split('_')[1]
             data = await state.get_data()
+            await bot.answer_callback_query(callback.id)
             if len(data) == 0:
-                await bot.answer_callback_query(callback.id)
                 await Buttons(
                     bot,
                     callback.message,
@@ -383,8 +351,6 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                 }
                 if len(answers) == idx:
                     answers.append(data_dict)
-                # elif len(answers) > idx:
-                #     answers[idx] = data_dict
 
                 if type_value == 'on':
                     answer_value = callback.data.split('_')[2]
@@ -411,40 +377,23 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                             keys_dict[f'✅ {k}'] = f'multi_off_{k}'
                         else:
                             keys_dict[f'{k}'] = f'multi_on_{k}'
+
                     else:
                         keys_dict[f'{k}'] = f'multi_on_{k}'
-                # await bot.answer_callback_query(callback.id)
-                await Buttons(
-                    bot,
-                    callback.message,
-                    question=text,
-                    back_button='назад', keys_dict=keys_dict).test_buttons(type=question['type'])
-                await state.update_data(question_idx=idx, answers=answers)
-
-
-        elif callback.data == "✅ Отправить ответы":
-            data = await state.get_data()
-            section = data["section"]
-            answers = data["answers"]
-            await bot.edit_message_text(
-                text="✅ Результаты опроса отправлены",
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-            )
-            sheet_base = await get_sheet_base()
-            await sheet_base.record_in_base(
-                bot, message=callback.message, section=section, answers=answers
-            )
-            await state.clear()
-
-        elif callback.data == "Общая база клиентов":
-            await bot.edit_message_text(
-                text="База для рассылки: Общая база клиентов\nОтправь мне пост 💬",
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-            )
-            await state.update_data(base=callback.data)
-            await state.set_state(Rassylka.post)
+                if idx < len(answers):
+                    await Buttons(
+                        bot,
+                        callback.message,
+                        question=text,
+                        back_button='назад', keys_dict=keys_dict).test_buttons(type=question['type'])
+                    await state.update_data(question_idx=idx, answers=answers)
+                else:
+                    bot_message = await Buttons(
+                                        bot,
+                                        callback.message,
+                                        question=text,
+                                        back_button='назад', keys_dict=keys_dict).test_buttons(type=question['type'])
+                    await state.update_data(question_idx=idx, answers=answers, bot_message=bot_message)
 
     except Exception as e:
         logger.exception("Ошибка в handlers/check_callbacks", e)
@@ -453,99 +402,81 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
 
 async def check_messages(message: Message, bot, state: FSMContext):
     try:
-        if message.text == "назад":
-            data = await state.get_data()
+        data = await state.get_data()
+        if len(data) != 0:
             section = data["section"]
             idx = data["question_idx"]
             answers = data["answers"]
-            bot_message_id = data["bot_message_id"]
-            idx -= 1
-            if idx == 0:
-                await Buttons(
-                    bot, message, question=structure_menu["Основное меню"][section][idx]
-                ).breef_buttons(
-                    bot_message_id,
-                    idx=0,
-                    answer=answers[idx],
-                    number_of_question=idx + 1,
-                    quantity_of_questions=len(structure_menu["Основное меню"][section]),
-                )
-            else:
-                await Buttons(
-                    bot, message, question=structure_menu["Основное меню"][section][idx]
-                ).breef_buttons(
-                    bot_message_id=bot_message_id,
-                    answer=answers[idx],
-                    number_of_question=idx + 1,
-                    quantity_of_questions=len(structure_menu["Основное меню"][section]),
-                )
-            answers.pop()  # Удаляем последний ответ
-            await state.update_data(question_idx=idx, answers=answers)
+            bot_message = data["bot_message"]
+            question = structure_menu["Основное меню"]['✍🏼 Тесты ️'][section]['questions'][idx]
+            if question['type'] == 'matching':
+                data_dict = {
+                    'part': question['part'],
+                    'type': question['type'],
+                    'text': question['text'],
+                    'answer': message.text,
+                    'correct': question['correct'],
+                    'interpretation': question['interpretation']
+                }
+                if len(answers) > idx:
+                    answers[idx] = data_dict
+                else:
+                    answers.append(data_dict)
 
-        elif message.text == "Основное меню":
-            await state.clear()
-            await Buttons(
-                bot,
-                message,
-                structure_menu["Основное меню"],
-                question="Пожалуйста выберите интересующий пункт меню:",
-            ).menu_buttons()
+                idx += 1
+
+                if idx < len(structure_menu["Основное меню"]['✍🏼 Тесты ️'][section]['questions']):
+                    question = structure_menu["Основное меню"]['✍🏼 Тесты ️'][section]['questions'][idx]
+                    text = question['part'] + '\n\n' + question['text']
+                    mess = await Buttons(
+                        bot,
+                        message,
+                        question=text,
+                        back_button='назад', keys_dict={}).test_buttons(type=question['type'], bot_message=bot_message)
+                    await state.update_data(question_idx=idx, answers=answers, bot_message=mess)
+                else:
+                    text = "РЕЗУЛЬТАТЫ ПРОХОЖДЕНИЯ\n\n\n"
+                    for i in answers:
+                        user_answer = ", ".join(i['answer']) if isinstance(i['answer'], list) else i['answer']
+                        correct = ", ".join(i['correct']) if isinstance(i['correct'], list) else i['correct']
+                        text = (text
+                                + i['part']
+                                + '\n\n'
+                                + i['text']
+                                + '\n\n'
+                                + 'Ваш ответ: '
+                                + user_answer
+                                + '\n'
+                                + 'Правильный ответ: '
+                                + correct
+                                + '\n\n'
+                                + "Пояснение:"
+                                + i['interpretation']
+                                + '\n\n')
+                    await send_long_message(
+                        bot,
+                        message.chat.id,  # Отправляем результаты пользователю
+                        f"{text}\n",
+                        parse_mode="html"
+                    )
+                    await bot.send_message(
+                        admin_id,
+                        f"🚨Уведомление🚨\n"
+                        f"<b>Пройденный тест от:</b>\n"
+                        f"Псевдоним: @{message.from_user.username}\n"
+                        f"id чата: {message.chat.id}\n\n",
+                        parse_mode="html"
+                    )
+                    # await send_long_message(
+                    #     bot,
+                    #     admin_id,  # Отправляем результаты пользователю
+                    #     f"<b>Результаты прохождения:</b>\n\n {text}\n",
+                    #     parse_mode="html"
+                    # )
+                    await state.clear()
+
         else:
-            data = await state.get_data()
-            section = data["section"]
-            idx = data["question_idx"]
-            answers = data["answers"]
-            bot_message_id = data["bot_message_id"]
-            if len(answers) > idx:
-                answers[idx] = message.text
-            else:
-                answers.append(message.text)
-
-            idx += 1
-
-            if idx < len(structure_menu["Основное меню"][section]):
-                await state.update_data(question_idx=idx, answers=answers)
-                await Buttons(
-                    bot, message, question=structure_menu["Основное меню"][section][idx]
-                ).breef_buttons(
-                    bot_message_id,
-                    idx=1,
-                    number_of_question=idx + 1,
-                    quantity_of_questions=len(structure_menu["Основное меню"][section]),
-                )
-            else:
-                questions = list(structure_menu["Основное меню"][section])
-                combined_answers = [
-                    f"<b>{questions.index(item1) + 1}. {item1}:</b>\n{item2}"
-                    for item1, item2 in zip(questions, answers)
-                ]
-                answer = "\n".join(combined_answers)
-                await Buttons(
-                    bot,
-                    message,
-                    question="Cпасибо за прохождение опроса! Выберите (✅ Отправить ответы) для передачи "
-                    "исполнителю или же пройдите опрос заново (❌ Отмена)."
-                    "\n\n" + answer,
-                ).breef_buttons(idx=2, bot_message_id=bot_message_id)
-                await bot.send_message(
-                    admin_id,
-                    f"🚨!!!СРОЧНО!!!🚨\n"
-                    f"<b>Заполненный бриф от:</b>\n"
-                    f"Псевдоним: @{message.from_user.username}\n"
-                    f"id чата: {message.chat.id}\n\n"
-                    f"<b>Предмет интереса:</b>\n"
-                    f"Категория: {section}\n"
-                    f"/sent_message - отправить сообщение с помощью бота",
-                    parse_mode="html",
-                )
-                await bot.send_message(
-                    admin_id,
-                    f"<b>Ответы:</b>\n\n {answer}\n"
-                    "Дополнительная информация в гугл таблице: "
-                    "https://docs.google.com/spreadsheets/d/"
-                    "1oGihEnG8KIsnZxd8W_B-TxGc10s_aOxpLPZgaqFBTIc/edit?usp=sharing",
-                    parse_mode="html",
-                )
+            pass
     except Exception as e:
         logger.exception("Ошибка в handlers/check_messages", e)
         await bot.send_message(loggs_acc, f"Ошибка в handlers/check_messages: {e}")

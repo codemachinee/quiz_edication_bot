@@ -86,6 +86,6 @@ jobs:
             # Запускаем контейнер
             docker run --pull=always -d \
               --name quiz_edication_bot \
-              -v /root/quiz_edication_bot/passwords.py:/app/passwords.py \
+              -v /root/quiz_edication_bot/paswords.py:/app/paswords.py \
               -v /root/autoallure.dmd/loggs.log:/app/loggs.log \
               ghcr.io/${{ github.repository_owner }}/quiz_edication_bot:latest

@@ -460,14 +460,14 @@ async def check_messages(message: Message, bot, state: FSMContext):
                         f"{text}\n",
                         parse_mode="html"
                     )
-                    await bot.send_message(
-                        admin_id,
-                        f"🚨Уведомление🚨\n"
-                        f"<b>Пройденный тест от:</b>\n"
-                        f"Псевдоним: @{message.from_user.username}\n"
-                        f"id чата: {message.chat.id}\n\n",
-                        parse_mode="html"
-                    )
+                    # await bot.send_message(
+                    #     admin_id,
+                    #     f"🚨Уведомление🚨\n"
+                    #     f"<b>Пройденный тест от:</b>\n"
+                    #     f"Псевдоним: @{message.from_user.username}\n"
+                    #     f"id чата: {message.chat.id}\n\n",
+                    #     parse_mode="html"
+                    # )
                     # await send_long_message(
                     #     bot,
                     #     admin_id,  # Отправляем результаты пользователю
@@ -481,3 +481,4 @@ async def check_messages(message: Message, bot, state: FSMContext):
     except Exception as e:
         logger.exception("Ошибка в handlers/check_messages", e)
         await bot.send_message(loggs_acc, f"Ошибка в handlers/check_messages: {e}")
+        await state.clear()

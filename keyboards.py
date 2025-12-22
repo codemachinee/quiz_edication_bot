@@ -6,7 +6,6 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from loguru import logger
 
 from paswords import loggs_acc
-from structure import structure_menu
 
 
 class Buttons:  # класс для создания клавиатур различных категорий товаров
@@ -49,7 +48,7 @@ class Buttons:  # класс для создания клавиатур разл
                 text=self.question,
                 chat_id=self.message.chat.id,
                 message_id=self.message.message_id,
-                parse_mode="markdown", reply_markup=kb2
+                parse_mode="html", reply_markup=kb2
             )
         except TelegramBadRequest as e:
             if "message can't be edited" in str(e):
@@ -95,7 +94,7 @@ class Buttons:  # класс для создания клавиатур разл
                     text=self.question,
                     chat_id=self.message.chat.id,
                     message_id=self.message.message_id,
-                    parse_mode="markdown", reply_markup=kb2
+                    parse_mode="html", reply_markup=kb2
                 )
             elif type == "multiple":
                 keys = {}

@@ -85,29 +85,61 @@ async def is_today(date_str: str) -> bool:
 
 async def send_long_message(bot, chat_id, text, parse_mode="html"):
     """
-    Разбивает длинное сообщение на части по 4096 символов и отправляет их.
+    Разбивает длинное сообщение на части, корректно обрабатывая HTML-теги.
     """
     MAX_MESSAGE_LENGTH = 4096
     if len(text) <= MAX_MESSAGE_LENGTH:
         await bot.send_message(chat_id, text, parse_mode=parse_mode)
-    else:
-        # Простая разбивка, можно улучшить, чтобы не обрезать слова посередине
-        chunks = []
-        while text:
-            if len(text) > MAX_MESSAGE_LENGTH:
-                chunk = text[:MAX_MESSAGE_LENGTH]
-                last_newline_index = chunk.rfind('\n') # Попробуем обрезать по последнему переводу строки
-                if last_newline_index != -1 and last_newline_index > MAX_MESSAGE_LENGTH - 500: # Если перевод строки достаточно близко к концу чанка
-                    chunk = text[:last_newline_index]
-                    text = text[last_newline_index:].lstrip('\n') # Удаляем лишние переводы строки в начале следующего чанка
-                else:
-                    chunk = text[:MAX_MESSAGE_LENGTH]
-                    text = text[MAX_MESSAGE_LENGTH:]
-            else:
-                chunk = text
-                text = ""
-            chunks.append(chunk)
+        return
 
-        for i, chunk in enumerate(chunks):
-            await bot.send_message(chat_id, chunk, parse_mode=parse_mode)
-            await asyncio.sleep(0.5)
+    import re
+    chunks = []
+    open_tags = []
+    
+    while text:
+        # Добавляем открытые теги в начало
+        current_chunk = "".join([f"<{tag}>" for tag in open_tags])
+        
+        # Определяем оставшееся место в чанке
+        remaining_len = MAX_MESSAGE_LENGTH - len(current_chunk)
+        
+        # Ищем позицию для обрезки
+        if len(text) <= remaining_len:
+            split_pos = len(text)
+        else:
+            # Пытаемся обрезать по последнему переносу строки
+            split_pos = text.rfind('\n', 0, remaining_len)
+            if split_pos == -1:
+                # Если переносов нет, ищем последний пробел
+                split_pos = text.rfind(' ', 0, remaining_len)
+            if split_pos == -1 or split_pos < remaining_len / 2:
+                # Если не нашли подходящего места, режем по длине
+                split_pos = remaining_len
+
+        # Добавляем текст в чанк
+        current_chunk += text[:split_pos]
+        text = text[split_pos:].lstrip()
+
+        # Анализируем теги в добавленном тексте
+        opened_in_chunk = re.findall(r"<([a-zA-Z1-9_]+)>", current_chunk)
+        closed_in_chunk = re.findall(r"</([a-zA-Z1-9_]+)>", current_chunk)
+        
+        # Обновляем стек открытых тегов
+        for tag in opened_in_chunk:
+            open_tags.append(tag)
+        for tag in closed_in_chunk:
+            if tag in open_tags:
+                # Удаляем последнее вхождение тега
+                for i in range(len(open_tags) - 1, -1, -1):
+                    if open_tags[i] == tag:
+                        open_tags.pop(i)
+                        break
+
+        # Закрываем оставшиеся открытые теги
+        current_chunk += "".join([f"</{tag}>" for tag in reversed(open_tags)])
+        
+        chunks.append(current_chunk)
+
+    for chunk in chunks:
+        await bot.send_message(chat_id, chunk, parse_mode=parse_mode)
+        await asyncio.sleep(0.5)

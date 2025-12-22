@@ -7,10 +7,11 @@ from loguru import logger
 
 from FSM import Breef, Get_admin
 from functions import clients_base, is_today, send_long_message
-moscow_tz = pytz.timezone('Europe/Moscow')
 from keyboards import Buttons
 from paswords import admin_id, admins_list, loggs_acc
 from structure import HELP_TEXT, structure_menu
+
+moscow_tz = pytz.timezone('Europe/Moscow')
 
 
 async def start(message: Message, bot, state: FSMContext):
@@ -207,7 +208,7 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                 text = question['part'] + '\n\n' + question['text']
                 keys_dict = {}
                 for k in question['options']:
-                    keys_dict[f'{k}'] = f'answer_{k}_{question['options'][k]}'
+                    keys_dict[f'{k}'] = f'answer_{k}_{question["options"][k]}'
                 await bot.answer_callback_query(callback.id)
                 if idx == 0:
                     await Buttons(
@@ -236,7 +237,7 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
             keys_dict = {}
             for i in structure_menu["Основное меню"][callback.data]:
                 text = text + i['id'] + " " + i['title'] + "\n\n"
-                keys_dict[f'{i['id']}'] = f'test_{structure_menu["Основное меню"][callback.data].index(i)}'
+                keys_dict[f'{i["id"]}'] = f'test_{structure_menu["Основное меню"][callback.data].index(i)}'
             await bot.answer_callback_query(callback.id)
             await Buttons(
                 bot,
@@ -442,12 +443,12 @@ async def check_messages(message: Message, bot, state: FSMContext):
                         text = (text
                                 + i['part']
                                 + '\n\n'
-                                + i['text']
+                                + f"<i>{i['text']}</i>"
                                 + '\n\n'
-                                + 'Ваш ответ: '
+                                + '<b>Ваш ответ: </b>'
                                 + user_answer
                                 + '\n'
-                                + 'Правильный ответ: '
+                                + '<b>Правильный ответ: </b>'
                                 + correct
                                 + '\n\n'
                                 + "Пояснение:"

@@ -96,49 +96,51 @@ async def send_long_message(bot, chat_id, text, parse_mode="html"):
     chunks = []
     open_tags = []
     
-    while text:
-        # Добавляем открытые теги в начало
-        current_chunk = "".join([f"<{tag}>" for tag in open_tags])
+    text_remaining = text
+    
+    while text_remaining:
+        # Start with open tags
+        chunk = "".join(f"<{tag}>" for tag in open_tags)
         
-        # Определяем оставшееся место в чанке
-        remaining_len = MAX_MESSAGE_LENGTH - len(current_chunk)
-        
-        # Ищем позицию для обрезки
-        if len(text) <= remaining_len:
-            split_pos = len(text)
+        # Determine the effective max length for this chunk
+        effective_max_len = MAX_MESSAGE_LENGTH - len(chunk) - (len(open_tags) * (len(max(open_tags, key=len)) + 3) if open_tags else 0)
+
+
+        # Find a safe split point
+        if len(text_remaining) <= effective_max_len:
+            split_pos = len(text_remaining)
         else:
-            # Пытаемся обрезать по последнему переносу строки
-            split_pos = text.rfind('\n', 0, remaining_len)
+            split_pos = text_remaining.rfind('\n', 0, effective_max_len)
             if split_pos == -1:
-                # Если переносов нет, ищем последний пробел
-                split_pos = text.rfind(' ', 0, remaining_len)
-            if split_pos == -1 or split_pos < remaining_len / 2:
-                # Если не нашли подходящего места, режем по длине
-                split_pos = remaining_len
+                split_pos = text_remaining.rfind(' ', 0, effective_max_len)
+            if split_pos == -1 or split_pos < effective_max_len / 2:
+                split_pos = effective_max_len
 
-        # Добавляем текст в чанк
-        current_chunk += text[:split_pos]
-        text = text[split_pos:].lstrip()
+        # Add the text to the chunk
+        chunk_text = text_remaining[:split_pos]
+        chunk += chunk_text
+        text_remaining = text_remaining[split_pos:].lstrip()
 
-        # Анализируем теги в добавленном тексте
-        opened_in_chunk = re.findall(r"<([a-zA-Z1-9_]+)>", current_chunk)
-        closed_in_chunk = re.findall(r"</([a-zA-Z1-9_]+)>", current_chunk)
+        # Find all tags in the chunk text to update the open_tags list
+        tags = re.finditer(r"(</?([a-zA-Z1-9_]+)>)", chunk_text)
+        for tag_match in tags:
+            full_tag, tag_name = tag_match.groups()
+            if full_tag.startswith("</"):
+                if tag_name in open_tags:
+                    # Pop from the stack
+                    last_open_tag = open_tags.pop()
+                    if last_open_tag != tag_name:
+                        # This indicates malformed HTML, but we'll try to recover
+                        if tag_name in open_tags:
+                            open_tags.remove(tag_name)
+
+            else:
+                open_tags.append(tag_name)
         
-        # Обновляем стек открытых тегов
-        for tag in opened_in_chunk:
-            open_tags.append(tag)
-        for tag in closed_in_chunk:
-            if tag in open_tags:
-                # Удаляем последнее вхождение тега
-                for i in range(len(open_tags) - 1, -1, -1):
-                    if open_tags[i] == tag:
-                        open_tags.pop(i)
-                        break
-
-        # Закрываем оставшиеся открытые теги
-        current_chunk += "".join([f"</{tag}>" for tag in reversed(open_tags)])
+        # Close any remaining open tags
+        chunk += "".join(f"</{tag}>" for tag in reversed(open_tags))
         
-        chunks.append(current_chunk)
+        chunks.append(chunk)
 
     for chunk in chunks:
         await bot.send_message(chat_id, chunk, parse_mode=parse_mode)

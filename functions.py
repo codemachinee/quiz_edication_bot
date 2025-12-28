@@ -43,23 +43,23 @@ class Clients:
         """
         return self.dict
 
-    async def load_base(self, clients_list: list):
-        """
-        Загружает список клиентов (например, полученный из Google Sheets) в оперативную память.
-        Итерируется по списку и использует `set_clients` для добавления каждого клиента.
-        """
-        try:
-            for i in clients_list:
-                data = {
-                    "id": i[0],
-                    "username": i[1],
-                    "name": i[2],
-                    "reasons": i[3],
-                    "date": i[4],
-                }
-                await self.set_clients(data)
-        except Exception as e:
-            logger.exception("Исключение вызванное functions/load_base", e)
+    # async def load_base(self, clients_list: list):
+    #     """
+    #     Загружает список клиентов (например, полученный из Google Sheets) в оперативную память.
+    #     Итерируется по списку и использует `set_clients` для добавления каждого клиента.
+    #     """
+    #     try:
+    #         for i in clients_list:
+    #             data = {
+    #                 "id": i[0],
+    #                 "username": i[1],
+    #                 "name": i[2],
+    #                 "reasons": i[3],
+    #                 "date": i[4],
+    #             }
+    #             await self.set_clients(data)
+    #     except Exception as e:
+    #         logger.exception("Исключение вызванное functions/load_base", e)
 
 
 # Создание единственного экземпляра класса Clients для использования в других модулях.
@@ -95,13 +95,13 @@ async def send_long_message(bot, chat_id, text, parse_mode="html"):
     import re
     chunks = []
     open_tags = []
-    
+
     text_remaining = text
-    
+
     while text_remaining:
         # Start with open tags
         chunk = "".join(f"<{tag}>" for tag in open_tags)
-        
+
         # Determine the effective max length for this chunk
         effective_max_len = MAX_MESSAGE_LENGTH - len(chunk) - (len(open_tags) * (len(max(open_tags, key=len)) + 3) if open_tags else 0)
 
@@ -136,10 +136,10 @@ async def send_long_message(bot, chat_id, text, parse_mode="html"):
 
             else:
                 open_tags.append(tag_name)
-        
+
         # Close any remaining open tags
         chunk += "".join(f"</{tag}>" for tag in reversed(open_tags))
-        
+
         chunks.append(chunk)
 
     for chunk in chunks:

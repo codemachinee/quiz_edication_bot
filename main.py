@@ -27,7 +27,7 @@ from handlers import (
 )
 
 # Импорт токенов и идентификаторов для логирования и бота
-from paswords import codemashine_test, loggs_acc
+from paswords import loggs_acc, tests_mk_bot
 
 # --- Настройка логирования с помощью Loguru ---
 logger.remove()  # Удаляет стандартные обработчики loguru, чтобы настроить свои

@@ -14,31 +14,37 @@ from structure import HELP_TEXT, structure_menu
 moscow_tz = pytz.timezone('Europe/Moscow')
 
 
-async def start(message: Message, bot, state: FSMContext):
+async def _show_main_menu(message: Message, bot, state: FSMContext, question: str):
+    """Отображает основное меню бота с заданным вопросом."""
     await state.clear()
     try:
-        if message.chat.id in admins_list:
-            await Buttons(
-                bot,
-                message,
-                structure_menu["Основное меню"],
-                question="<b>Бот-для проведения тестов</b>\n"
-                "<b>Режим доступа</b>: Администратор\n"
-                "/help - справка по боту\n\n"
-                "Пожалуйста выберите интересующий пункт меню:",
-            ).menu_buttons()
-        else:
-            await Buttons(
-                bot,
-                message,
-                structure_menu["Основное меню"],
-                question="<b>Бот-для проведения тестов</b>\n"
-                "/help - справка по боту\n\n"
-                "Пожалуйста выберите интересующий пункт меню:",
-            ).menu_buttons()
+        await Buttons(
+            bot,
+            message,
+            structure_menu["Основное меню"],
+            question=question,
+        ).menu_buttons()
     except Exception as e:
-        logger.exception("Ошибка в handlers/start", e)
-        await bot.send_message(loggs_acc, f"Ошибка в handlers/start: {e}")
+        logger.exception("Ошибка при отображении главного меню", e)
+        await bot.send_message(loggs_acc, f"Ошибка в handlers/_show_main_menu: {e}")
+
+
+async def start(message: Message, bot, state: FSMContext):
+    """Обработчик команды /start. Отображает приветственное сообщение и основное меню."""
+    if message.chat.id in admins_list:
+        question = (
+            "<b>Бот-для проведения тестов</b>\n"
+            "<b>Режим доступа</b>: Администратор\n"
+            "/help - справка по боту\n\n"
+            "Пожалуйста выберите интересующий пункт меню:"
+        )
+    else:
+        question = (
+            "<b>Бот-для проведения тестов</b>\n"
+            "/help - справка по боту\n\n"
+            "Пожалуйста выберите интересующий пункт меню:"
+        )
+    await _show_main_menu(message, bot, state, question)
 
 
 async def help(message: Message, bot, state: FSMContext):
@@ -72,28 +78,9 @@ async def help(message: Message, bot, state: FSMContext):
 
 
 async def menu(message: Message, bot, state: FSMContext):
-    await state.clear()
-    try:
-        if (
-            message.chat.id in admins_list
-        ):  # условия демонстрации различных команд для админа и клиентов
-            await Buttons(
-                bot,
-                message,
-                structure_menu["Основное меню"],
-                question="Пожалуйста выберите интересующий пункт меню:",
-            ).menu_buttons()
-
-        else:
-            await Buttons(
-                bot,
-                message,
-                structure_menu["Основное меню"],
-                question="Пожалуйста выберите интересующий пункт меню:",
-            ).menu_buttons()
-    except Exception as e:
-        logger.exception("Ошибка в handlers/menu", e)
-        await bot.send_message(loggs_acc, f"Ошибка в handlers/menu: {e}")
+    """Обработчик команды /menu. Отображает основное меню."""
+    question = "Пожалуйста выберите интересующий пункт меню:"
+    await _show_main_menu(message, bot, state, question)
 
 
 async def day_visitors(message: Message, bot, state: FSMContext):
@@ -145,9 +132,10 @@ async def day_visitors(message: Message, bot, state: FSMContext):
 
 
 async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
-    assert (
-        callback is not None
-    )  # обозначаем для проверочной библиотеки mypy, чтобы избегать лишних ошибок при тесте
+    if not isinstance(callback.message, Message):
+        await callback.answer("Исходное сообщение недоступно.", show_alert=True)
+        return
+
     assert callback.data is not None
     try:
         if callback.data == "ℹ️ Обо мне":
@@ -173,7 +161,7 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                 chat_id=admin_id,
                 text=f"🚨!!!СРОЧНО!!!🚨\n"
                 f"<b>поступил запрос на ЧАТ С АДМИНИСТРАТОРОМ от:</b>\n"
-                f"Ссылка: @{callback.from_user.username}\n"
+                f"Ссылка: @{callback.from_user.username if callback.from_user.username else 'не указан'}\n"
                 f"id чата: {callback.message.chat.id}\n"
                 f"<b>Если ссылка на чат отсутствует запроси контакт или отправь свой с помощью команды</b>:\n",
                 parse_mode="html",
@@ -235,9 +223,10 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
             await state.clear()
             text = "Для прохождения доступны следующие тесты:\n\n\n"
             keys_dict = {}
-            for i in structure_menu["Основное меню"][callback.data]:
-                text = text + i['id'] + " " + i['title'] + "\n\n"
-                keys_dict[f'{i["id"]}'] = f'test_{structure_menu["Основное меню"][callback.data].index(i)}'
+            test_list = structure_menu["Основное меню"][callback.data]
+            for idx, i in enumerate(test_list):
+                text += f"{i['id']} {i['title']}\n\n"
+                keys_dict[f'{i["id"]}'] = f'test_{idx}'
             await bot.answer_callback_query(callback.id)
             await Buttons(
                 bot,
@@ -250,7 +239,7 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                 await clients_base.set_clients(
                     data={
                         "id": callback.message.chat.id,
-                        "username": callback.message.chat.username,
+                        "username": callback.message.chat.username or "",
                         "name": callback.message.chat.first_name,
                         "reasons": callback.data,
                         "date": str(datetime.now(moscow_tz).strftime("%d.%m.%y %H:%M")),
@@ -262,8 +251,8 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                     "date",
                     str(datetime.now(moscow_tz).strftime("%d.%m.%y %H:%M")),
                 )
-            data = int(str(callback.data)[len('test_'):])
-            question = structure_menu["Основное меню"]['✍🏼 Тесты ️'][data]['questions'][0]
+            test_index = int(str(callback.data)[len('test_'):])
+            question = structure_menu["Основное меню"]['✍🏼 Тесты ️'][test_index]['questions'][0]
             text = question['part'] + '\n\n' + question['text']
             keys_dict = {}
             for k in question['options']:
@@ -275,7 +264,7 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                 question=text,
                 back_button='✍🏼 Тесты ️', keys_dict=keys_dict).test_buttons()
             await state.update_data(
-                section=data,
+                section=test_index,
                 question_idx=0,
                 answers=[]
             )
@@ -353,19 +342,20 @@ async def check_callbacks(callback: CallbackQuery, bot, state: FSMContext):
                 if len(answers) == idx:
                     answers.append(data_dict)
 
+                current_answer_list = answers[idx]['answer']
                 if type_value == 'on':
-                    answer_value = callback.data.split('_')[2]
-                    if answer_value in answers[idx]['answer']:
-                        pass
-                    else:
-                        answers[idx]['answer'].append(answer_value)
+                    answer_to_add = callback.data.split('_')[2]
+                    if answer_to_add not in current_answer_list:
+                        current_answer_list.append(answer_to_add)
+
 
                 elif type_value == 'off':
-                    answer_value = callback.data.split('_')[2]
-                    if answer_value[2:] in answers[idx]['answer']:
-                        answers[idx]['answer'].remove(answer_value[2:])
-                    else:
-                        pass
+                    answer_to_remove = callback.data.split('_')[2]
+                    if answer_to_remove.startswith('✅ '):
+                        answer_to_remove = answer_to_remove[2:]
+                    if answer_to_remove in current_answer_list:
+                        current_answer_list.remove(answer_to_remove)
+
                 elif type_value == 'answer':
                     idx += 1
 
@@ -464,7 +454,7 @@ async def check_messages(message: Message, bot, state: FSMContext):
                         admin_id,
                         f"🚨Уведомление🚨\n"
                         f"<b>Пройденный тест от:</b>\n"
-                        f"Псевдоним: @{message.from_user.username}\n"
+                        f"Псевдоним: @{message.from_user.username if message.from_user and message.from_user.username else 'не указан'}\n"
                         f"id чата: {message.chat.id}\n\n",
                         parse_mode="html"
                     )

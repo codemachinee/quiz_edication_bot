@@ -1,4 +1,6 @@
-structure_menu = {'Основное меню': {
+from typing import Any, Dict, List
+
+structure_menu: Dict[str, Dict[str, List[Dict[str, Any]]]] = {'Основное меню': {
                    '✍🏼 Тесты ️': [{'id': 'Тест 1',
                                    'questions': [{'correct': 'C',
                                                   'interpretation': '"C" '

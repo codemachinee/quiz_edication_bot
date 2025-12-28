@@ -27,7 +27,7 @@ from handlers import (
 )
 
 # Импорт токенов и идентификаторов для логирования и бота
-from paswords import codemashine_test, loggs_acc, tests_mk_bot
+from paswords import codemashine_test, loggs_acc
 
 # --- Настройка логирования с помощью Loguru ---
 logger.remove()  # Удаляет стандартные обработчики loguru, чтобы настроить свои
@@ -45,6 +45,10 @@ logger.add(
 # --- Инициализация бота и диспетчера ---
 # token = codemashine_test  # Выбор токена для бота
 token = tests_mk_bot
+
+if token is None:
+    logger.critical("Не удалось загрузить токен бота. Проверьте .env файл.")
+    raise ValueError("Не указан токен бота")
 
 bot = Bot(token=token)  # Создание экземпляра бота
 dp = Dispatcher()  # Создание экземпляра диспетчера для обработки событий

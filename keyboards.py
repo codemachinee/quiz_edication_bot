@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
@@ -14,8 +15,8 @@ class Buttons:  # класс для создания клавиатур разл
         bot,
         message: types.Message,
         keys_dict: dict,
-        back_button: str = None,
-        question: str = None,
+        back_button: Optional[str] = None,
+        question: Optional[str] = None,
     ):
         self.bot = bot
         self.message = message
